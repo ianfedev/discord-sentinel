@@ -14,7 +14,7 @@ func main() {
 	logger.Info("Starting up Sentinel")
 
 	// Parse config and set up enhanced logger
-	cfg, err := config.ParseConfig()
+	cfg, err := config.ParseConfig(logger)
 	if err != nil {
 		logger.Error("Error reading configuration", zap.Error(err))
 		os.Exit(1)

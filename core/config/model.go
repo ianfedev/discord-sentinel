@@ -3,7 +3,7 @@ package config
 // Discord struct defines the configuration for the Discord bot
 // Token is the bot's authentication token
 type Discord struct {
-	Token string `koanf:"token"`
+	Token string `koanf:"token" env_recommended:"true"`
 }
 
 // Log struct defines the configuration for logging
