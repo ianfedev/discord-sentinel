@@ -31,9 +31,15 @@ type Database struct {
 	MaxLifetime    int
 }
 
+type HTTP struct {
+	Host string
+	Port string
+}
+
 // Config struct defines the final configuration struct to be unmarshalled.
 type Config struct {
 	Discord  Discord  `mapstructure:"discord"`
 	Log      Log      `mapstructure:"log"`
 	Database Database `mapstructure:"database"`
+	HTTP     HTTP     `mapstructure:"http"`
 }

@@ -21,4 +21,7 @@ func SetDefaultValues(v *viper.Viper) {
 	v.SetDefault("database.maxidle", 5)
 	v.SetDefault("database.maxlifetime", 30)
 
+	v.SetDefault("http.port", "3000")
+	v.SetDefault("http.address", "0.0.0.0")
+
 }
