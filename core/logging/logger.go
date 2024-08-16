@@ -10,6 +10,7 @@ import (
 type LoggerConfig struct {
 	LogFile   *os.File
 	UseColors bool
+	LogLevel  zapcore.Level
 }
 
 // NewLogger configures a new logger based on LoggerConfig data.
@@ -27,9 +28,9 @@ func NewLogger(config LoggerConfig) (*zap.Logger, error) {
 
 	// Create the core based on the presence of a log file
 	var cores []zapcore.Core
-	cores = append(cores, zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), zapcore.DebugLevel))
+	cores = append(cores, zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), config.LogLevel))
 	if config.LogFile != nil {
-		fileCore := zapcore.NewCore(jsonEncoder, zapcore.AddSync(config.LogFile), zapcore.DebugLevel)
+		fileCore := zapcore.NewCore(jsonEncoder, zapcore.AddSync(config.LogFile), config.LogLevel)
 		cores = append(cores, fileCore)
 	}
 
@@ -38,5 +39,4 @@ func NewLogger(config LoggerConfig) (*zap.Logger, error) {
 	logger := zap.New(core, zap.AddCaller())
 
 	return logger, nil
-
 }

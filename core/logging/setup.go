@@ -12,6 +12,7 @@ func SetupInitialLogger() *zap.Logger {
 	logCfg := &LoggerConfig{
 		UseColors: false,
 		LogFile:   nil,
+		LogLevel:  zap.DebugLevel,
 	}
 
 	logger, err := NewLogger(*logCfg)
@@ -25,9 +26,15 @@ func SetupInitialLogger() *zap.Logger {
 // SetupEnhancedLogger creates the unmarshalled final configuration logger.
 func SetupEnhancedLogger(cfg *config.Config) (*zap.Logger, *os.File, error) {
 
+	lvl := zap.DebugLevel
+	if cfg.Environment == "production" {
+		lvl = zap.InfoLevel
+	}
+
 	var file os.File
 	logCfg := &LoggerConfig{
 		UseColors: cfg.Log.Color,
+		LogLevel:  lvl,
 	}
 
 	if cfg.Log.File != "" {

@@ -1,5 +1,13 @@
 package config
 
+type Environment string
+
+const (
+	Production  Environment = "production"
+	Staging     Environment = "staging"
+	Development Environment = "development"
+)
+
 // Discord struct defines the configuration for the Discord bot
 // Token is the bot's authentication token
 type Discord struct {
@@ -38,8 +46,9 @@ type HTTP struct {
 
 // Config struct defines the final configuration struct to be unmarshalled.
 type Config struct {
-	Discord  Discord  `mapstructure:"discord"`
-	Log      Log      `mapstructure:"log"`
-	Database Database `mapstructure:"database"`
-	HTTP     HTTP     `mapstructure:"http"`
+	Environment Environment `mapstructure:"environment"`
+	Discord     Discord     `mapstructure:"discord"`
+	Log         Log         `mapstructure:"log"`
+	Database    Database    `mapstructure:"database"`
+	HTTP        HTTP        `mapstructure:"http"`
 }

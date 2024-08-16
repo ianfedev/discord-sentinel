@@ -7,6 +7,8 @@ import (
 // SetDefaultValues provides the default configuration values if not present.
 func SetDefaultValues(v *viper.Viper) {
 
+	v.SetDefault("environment", "development")
+
 	v.SetDefault("discord.token", "")
 
 	v.SetDefault("log.file", "")

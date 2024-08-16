@@ -5,6 +5,7 @@ import (
 	"discord-sentinel/core/database"
 	"discord-sentinel/core/http"
 	"discord-sentinel/core/logging"
+	"discord-sentinel/feature"
 	"go.uber.org/zap"
 	"os"
 	"os/signal"
@@ -29,20 +30,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	logger.Info("Loaded configuration successfully")
+	logger.Info("Loaded configuration successfully", zap.String("environment", string(cfg.Environment)))
 
-	_, err = database.SetupDatabaseConnection(&cfg.Database)
+	db, err := database.SetupDatabaseConnection(&cfg.Database)
 	if err != nil {
 		logger.Error("Error establishing connection with the database", zap.Error(err))
 		os.Exit(1)
 	}
 	logger.Info("Established connection with the database successfully")
 
-	app, err := http.SetupHTTPServer()
+	app, err := http.SetupHTTPServer(cfg)
 	if err != nil {
 		logger.Error("Error setting up HTTP server", zap.Error(err))
 		os.Exit(1)
 	}
+	feature.SetupFeatures(app, logger, db)
 
 	// Use a wait group to wait for the server to shut down
 	var wg sync.WaitGroup

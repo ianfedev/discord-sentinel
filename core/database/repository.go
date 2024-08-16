@@ -21,7 +21,7 @@ type GormRepository[T any] struct {
 }
 
 // NewGormRepository creates a new GormRepository.
-func wNewGormRepository[T any](db *gorm.DB) *GormRepository[T] {
+func NewGormRepository[T any](db *gorm.DB) *GormRepository[T] {
 	return &GormRepository[T]{db: db}
 }
 
