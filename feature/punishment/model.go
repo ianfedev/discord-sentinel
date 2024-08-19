@@ -1,6 +1,9 @@
 package punishment
 
-import "time"
+import (
+	"discord-sentinel/core/database"
+	"time"
+)
 
 type Type int
 
@@ -14,8 +17,7 @@ const (
 // Punishment struct defines the record of a user punishment
 // when is applied automatically or manually.
 type Punishment struct {
-	// ID of the punishment
-	Id int `json:"id" gorm:"type:int;primary_key"`
+	database.Model
 
 	// Issuer of the punishment
 	// Can be another Discord user identifier or "SENTINEL",
@@ -36,8 +38,4 @@ type Punishment struct {
 
 	// Automatic if the punishment was issued by Sentinel itself.
 	Automatic bool `json:"automatic" gorm:"type:bool;default:false"`
-
-	// Timestamps
-	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }

@@ -3,35 +3,26 @@ package database
 import (
 	"context"
 	"gorm.io/gorm"
+	"reflect"
 )
 
-// Repository defines an interface with common CRUD behaviour for
-// database connection.
-type Repository[T any] interface {
-	Create(ctx context.Context, entity *T) error
-	FindByID(ctx context.Context, id int) (*T, error)
-	Update(ctx context.Context, entity *T) error
-	Delete(ctx context.Context, id int) error
-	List(ctx context.Context, query func(*gorm.DB) *gorm.DB) ([]T, error)
-}
-
-// GormRepository implements Repository interface using GORM.
-type GormRepository[T any] struct {
+// Repository implements Repository interface using GORM.
+type Repository[T any] struct {
 	db *gorm.DB
 }
 
-// NewGormRepository creates a new GormRepository.
-func NewGormRepository[T any](db *gorm.DB) *GormRepository[T] {
-	return &GormRepository[T]{db: db}
+// NewGormRepository creates a new Repository.
+func NewGormRepository[T any](db *gorm.DB) *Repository[T] {
+	return &Repository[T]{db: db}
 }
 
 // Create inserts a new record.
-func (r *GormRepository[T]) Create(ctx context.Context, entity *T) error {
+func (r *Repository[T]) Create(ctx context.Context, entity *T) error {
 	return r.db.WithContext(ctx).Create(entity).Error
 }
 
 // FindByID retrieves a record by its ID.
-func (r *GormRepository[T]) FindByID(ctx context.Context, id int) (*T, error) {
+func (r *Repository[T]) FindByID(ctx context.Context, id int) (*T, error) {
 	var entity T
 	if err := r.db.WithContext(ctx).First(&entity, id).Error; err != nil {
 		return nil, err
@@ -39,18 +30,40 @@ func (r *GormRepository[T]) FindByID(ctx context.Context, id int) (*T, error) {
 	return &entity, nil
 }
 
-// Update updates an existing record.
-func (r *GormRepository[T]) Update(ctx context.Context, entity *T) error {
-	return r.db.WithContext(ctx).Save(entity).Error
+// Update updates an existing record, ensuring ID and CreatedAt are not modified and UpdatedAt is refreshed.
+func (r *Repository[T]) Update(ctx context.Context, entity *T) error {
+
+	baseEntity, ok := any(entity).(BaseModel)
+	if !ok {
+		return gorm.ErrInvalidData
+	}
+
+	dbEntity, err := r.FindByID(ctx, baseEntity.GetID())
+	if err != nil {
+		return err
+	}
+
+	entityValue := reflect.ValueOf(entity).Elem()
+	idField := entityValue.FieldByName("Id")
+	if idField.IsValid() {
+		idField.Set(reflect.Zero(idField.Type()))
+	}
+
+	updates := r.db.Model(dbEntity).Updates(entity)
+	if updates.Error != nil {
+		return updates.Error
+	}
+
+	return r.db.Model(dbEntity).Update("updated_at", gorm.Expr("NOW()")).Error
 }
 
 // Delete removes a record by its ID.
-func (r *GormRepository[T]) Delete(ctx context.Context, id int) error {
+func (r *Repository[T]) Delete(ctx context.Context, id int) error {
 	return r.db.WithContext(ctx).Delete(new(T), id).Error
 }
 
 // List retrieves all records with an optional query customization.
-func (r *GormRepository[T]) List(ctx context.Context, query func(*gorm.DB) *gorm.DB) ([]T, error) {
+func (r *Repository[T]) List(ctx context.Context, query func(*gorm.DB) *gorm.DB) ([]T, error) {
 	var entities []T
 	db := r.db.WithContext(ctx)
 	if query != nil {

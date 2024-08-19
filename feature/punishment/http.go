@@ -2,8 +2,11 @@ package punishment
 
 import (
 	"discord-sentinel/core/database"
+	"discord-sentinel/core/http"
+	"errors"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -23,6 +26,8 @@ func NewPunishmentHandler(service *database.Service[Punishment], logger *zap.Log
 	}
 
 	app.Post("/punishment", rh.Create)
+	app.Get("/punishment/:id", rh.GetByID)
+	app.Put("/punishment/:id", rh.Update)
 
 	return rh
 }
@@ -34,24 +39,72 @@ func (h *RouteHandler) Create(c *fiber.Ctx) error {
 
 	// Parse the JSON body into the Punishment struct
 	if err := c.BodyParser(&punishment); err != nil {
-		(*h.logger).Error("Error while parsing request body", zap.Error(err))
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "invalid_request_payload",
-			"message": err.Error(),
-		})
+		return http.PerformError(c, h.logger, "Error while parsing request body", 400, &err)
 	}
 
 	punishment.CreatedAt = time.Now()
 	punishment.UpdatedAt = time.Now()
 
+	// Every punishment created via API should not be automatic.
+	punishment.Automatic = false
+
 	if err := (*h.service).Create(c.Context(), &punishment); err != nil {
-		(*h.logger).Error("Error while creating punishment", zap.Error(err))
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "internal_server_error",
-			"message": err.Error(),
-		})
+		return http.PerformError(c, h.logger, "Error while creating punishment", 500, &err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(punishment)
+
+}
+
+// GetByID obtains from database a specific id.
+func (h *RouteHandler) GetByID(c *fiber.Ctx) error {
+
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return http.PerformError(c, h.logger, "No valid ID was provided", 400, &err)
+	}
+
+	punishment, err := (*h.service).GetByID(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			err = errors.New("punishment not found")
+		}
+		return http.PerformError(c, h.logger, "Error while retrieving punishment", 500, &err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(punishment)
+}
+
+func (h *RouteHandler) Update(c *fiber.Ctx) error {
+
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return http.PerformError(c, h.logger, "No valid ID was provided", 400, &err)
+	}
+
+	var punishment Punishment
+
+	punRec, err := (*h.service).GetByID(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			err = errors.New("punishment not found")
+		}
+		return http.PerformError(c, h.logger, "Error while retrieving punishment", 500, &err)
+	}
+
+	if err := c.BodyParser(&punishment); err != nil {
+		return http.PerformError(c, h.logger, "Error while parsing request body", 400, &err)
+	}
+
+	// TODO: Set this at service level
+	punishment.Id = punRec.Id
+	punishment.CreatedAt = punRec.CreatedAt
+	punishment.UpdatedAt = time.Now()
+
+	if err := (*h.service).Update(c.Context(), &punishment); err != nil {
+		return http.PerformError(c, h.logger, "Error while updating punishment", 500, &err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(punishment)
 
 }
